@@ -1,0 +1,87 @@
+CREATE DATABASE IF NOT EXISTS orcafacil CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE orcafacil;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    email VARCHAR(180) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('client', 'store') NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS stores (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL UNIQUE,
+    store_name VARCHAR(150) NOT NULL,
+    city VARCHAR(120) DEFAULT NULL,
+    phone VARCHAR(40) DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_stores_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS favorites (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    client_id INT UNSIGNED NOT NULL,
+    store_id INT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_favorite (client_id, store_id),
+    CONSTRAINT fk_favorites_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_favorites_store FOREIGN KEY (store_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS quotes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    client_id INT UNSIGNED NOT NULL,
+    title VARCHAR(180) NOT NULL,
+    description TEXT DEFAULT NULL,
+    target_type ENUM('all', 'favorites') NOT NULL,
+    status ENUM('open', 'closed') NOT NULL DEFAULT 'open',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_quotes_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS quote_items (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    quote_id INT UNSIGNED NOT NULL,
+    item_name VARCHAR(180) NOT NULL,
+    quantity DECIMAL(10,2) NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_quote_items_quote FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS quote_store_targets (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    quote_id INT UNSIGNED NOT NULL,
+    store_id INT UNSIGNED NOT NULL,
+    responded TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_quote_store (quote_id, store_id),
+    CONSTRAINT fk_quote_store_targets_quote FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_quote_store_targets_store FOREIGN KEY (store_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS quote_responses (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    quote_id INT UNSIGNED NOT NULL,
+    store_id INT UNSIGNED NOT NULL,
+    total_amount DECIMAL(12,2) NOT NULL,
+    delivery_deadline VARCHAR(80) NOT NULL,
+    payment_terms VARCHAR(180) NOT NULL,
+    message TEXT DEFAULT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_response (quote_id, store_id),
+    CONSTRAINT fk_quote_responses_quote FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE,
+    CONSTRAINT fk_quote_responses_store FOREIGN KEY (store_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NOT NULL,
+    message VARCHAR(255) NOT NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
